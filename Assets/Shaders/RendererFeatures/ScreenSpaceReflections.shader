@@ -41,71 +41,86 @@ Shader "RendererFeatures/ScreenSpaceReflections"
 
 			float4 Frag(Varyings input) : SV_Target
 			{
-				float depth = RetrieveDepth(input.texcoord);
+				float4 gBuffer2Info = SAMPLE_TEXTURE2D(_GBuffer2Texture, sampler_GBuffer2Texture, input.texcoord);
 
-				float3 PixelWorldSpacePosition = ComputeWorldSpacePosition(input.texcoord, depth, UNITY_MATRIX_I_VP);
-                float3 CameraWorldSpacePosition = GetCameraPositionWS();
+				float reflectiveness = gBuffer2Info.a;
+				if (reflectiveness <= 0.0) return float4(0.0, 0.0, 0.0, 0.0);
 
-				float3 viewDir = normalize(PixelWorldSpacePosition - CameraWorldSpacePosition);
-                float3 normal = SAMPLE_TEXTURE2D(_GBuffer2Texture, sampler_GBuffer2Texture, input.texcoord).rgb;
-                float3 reflectionDirection = normalize(reflect(viewDir, normal));
+				#if UNITY_REVERSED_Z
+					float depth = SampleSceneDepth(input.texcoord);
+				#else
+					float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(input.texcoord));
+				#endif
 
-				float3 startPos = PixelWorldSpacePosition;
-                float3 pos = startPos;
+				// not using ComputeViewSpacePosition(input.texcoord, depth, UNITY_MATRIX_I_P) because it flips the z.
+				float4 posCS = ComputeClipSpacePosition(input.texcoord, depth); 
+				float4 posCStoVS = mul(UNITY_MATRIX_I_P, posCS);
+				float3 posVS = posCStoVS.xyz / posCStoVS.w;
 
-				// rough search
-                for (int i = 0; i < 48; i++)
-                {
-                    pos = startPos + reflectionDirection * i * 1.0;
-                    float2 screenUV = ComputeNormalizedDeviceCoordinates(pos, UNITY_MATRIX_VP);
-                    float3 screenWithZ = ComputeNormalizedDeviceCoordinatesWithZ(pos, UNITY_MATRIX_VP);
+				float3 N_world = normalize(gBuffer2Info.rgb);
+				float3 N_view = normalize(mul((float3x3)UNITY_MATRIX_V, N_world));
 
-                    if (screenUV.x > 1 || screenUV.x < 0 || screenUV.y > 1 || screenUV.y < 0)
-					{
-                        break;
-					}
+				float3 V_view = normalize(posVS);
+				float3 R_view = normalize(reflect(V_view, N_view));
 
-                    float testDepth = LinearEyeDepth(RetrieveDepth(screenUV), _ZBufferParams);
+				float3 rayposVS = posVS + R_view * 0.001;
+				float3 projUV = float3(input.texcoord, 0.0);
 
-                    if (testDepth <= screenWithZ.z)
-					{
-                        break;
-					}
-                }
+				float hitT = -1.0;
 
-                float3 minPos = pos - reflectionDirection * 1.0;
-                float3 maxPos = pos;
+				const float stepSize = 0.5;
 
-                // binary search
-                for (int i = 0; i < 16; i++)
-                {
-                    pos = (minPos + maxPos) * 0.5;
-                    float2 screenUV = ComputeNormalizedDeviceCoordinates(pos, UNITY_MATRIX_VP);
-                    float3 screenWithZ = ComputeNormalizedDeviceCoordinatesWithZ(pos, UNITY_MATRIX_VP);
-
-                    if (screenUV.x > 1 || screenUV.x < 0 || screenUV.y > 1 || screenUV.y < 0)
-                        continue;
-                        
-                    float testDepth = LinearEyeDepth(RetrieveDepth(screenUV), _ZBufferParams);
-
-                    if (testDepth <= screenWithZ.z)
-                    {
-                        maxPos = pos;
-                    }
-                    else
-                    {
-                        minPos = pos;
-                    }
-                }
-
-				float2 screenUV = ComputeNormalizedDeviceCoordinates(pos, UNITY_MATRIX_VP);
-
-                if (screenUV.x > 1 || screenUV.x < 0 || screenUV.y > 1 || screenUV.y < 0)
+				[loop]
+				for (int i = 0; i < 128; i++)
 				{
-                    return float4(0.0, 0.0, 0.0, 0.0);
+					rayposVS = rayposVS + (R_view * stepSize);
+
+					projUV = ComputeNormalizedDeviceCoordinatesWithZ(rayposVS, UNITY_MATRIX_P);
+
+					if (projUV.x < 0 || projUV.x > 1 || projUV.y < 0 || projUV.y > 1)
+					{
+						return float4(0.0, 0.0, 0.0, 0.0);
+					}
+
+					float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+
+					[branch]
+					if (testDepth <= projUV.z)
+					{
+						hitT = 0.001 + i * stepSize;
+						break;
+					}
 				}
 
-                return SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, screenUV);
+				[branch]
+				if (hitT >= 0.0)
+				{
+					float tMin = hitT - 1.0;
+					float tMax = hitT;
+
+					[loop]
+					for (int i = 0; i < 64; i++)
+					{
+						float tMid = (tMin + tMax) * 0.5;
+						rayposVS = posVS + (R_view * tMid);
+
+						projUV = ComputeNormalizedDeviceCoordinatesWithZ(rayposVS, UNITY_MATRIX_P);
+
+						float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+
+						[branch]
+						if (testDepth <= projUV.z)
+						{
+							tMax = tMid;
+						}
+						else
+						{
+							tMin = tMid;
+						}
+					}
+				}
+
+				return SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, projUV.xy);
 			}
 
 			ENDHLSL
