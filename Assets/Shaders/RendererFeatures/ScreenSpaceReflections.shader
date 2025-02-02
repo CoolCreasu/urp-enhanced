@@ -30,15 +30,6 @@ Shader "RendererFeatures/ScreenSpaceReflections"
 			Texture2D _GBuffer2Texture;
 			SAMPLER(sampler_GBuffer2Texture);
 
-			float RetrieveDepth(float2 uv)
-            {
-                #if UNITY_REVERSED_Z
-				    return SampleSceneDepth(uv);
-				#else
-				    return lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(uv);
-				#endif
-            }
-
 			float4 Frag(Varyings input) : SV_Target
 			{
 				float4 gBuffer2Info = SAMPLE_TEXTURE2D(_GBuffer2Texture, sampler_GBuffer2Texture, input.texcoord);
@@ -82,7 +73,11 @@ Shader "RendererFeatures/ScreenSpaceReflections"
 						return float4(0.0, 0.0, 0.0, 0.0);
 					}
 
-					float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+					#if UNITY_REVERSED_Z
+						float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+					#else
+						float testDepth = LinearEyeDepth(lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(projUV.xy)), _ZBufferParams);
+					#endif
 
 					[branch]
 					if (testDepth <= projUV.z)
@@ -106,7 +101,11 @@ Shader "RendererFeatures/ScreenSpaceReflections"
 
 						projUV = ComputeNormalizedDeviceCoordinatesWithZ(rayposVS, UNITY_MATRIX_P);
 
-						float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+						#if UNITY_REVERSED_Z
+							float testDepth = LinearEyeDepth(SampleSceneDepth(projUV.xy), _ZBufferParams);
+						#else
+							float testDepth = LinearEyeDepth(lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(projUV.xy)), _ZBufferParams);
+						#endif
 
 						[branch]
 						if (testDepth <= projUV.z)
