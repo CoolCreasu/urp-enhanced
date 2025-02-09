@@ -62,7 +62,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: -5308967045308578020}
   - {fileID: 5980040489756063668}
-  m_RendererFeatureMap: 1c8720b499c252b6b4f75c4e245ffd52
+  - {fileID: 5544205160553583774}
+  m_RendererFeatureMap: 1c8720b499c252b6b4f75c4e245ffd529e14af1438f9f04c
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -103,6 +104,20 @@ MonoBehaviour:
   m_Active: 1
   material: {fileID: 2100000, guid: f1ca87ad40267ce409682548033c42e4, type: 2}
   renderPassEvent: 600
+--- !u!114 &5544205160553583774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b05bd89006e12b4fb330389253e1e15, type: 3}
+  m_Name: TrueScreenSpaceReflections
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  material: {fileID: 2100000, guid: 91c7d1a80a77bdc40a51148d931e6f38, type: 2}
 --- !u!114 &5980040489756063668
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -115,5 +130,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01d27e573a65865478350585c1b0cffe, type: 3}
   m_Name: ScreenSpaceReflections
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   material: {fileID: 2100000, guid: f1ca87ad40267ce409682548033c42e4, type: 2}
