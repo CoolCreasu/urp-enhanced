@@ -117,6 +117,7 @@ MonoBehaviour:
   m_Name: TrueScreenSpaceReflections
   m_EditorClassIdentifier: 
   m_Active: 1
+  renderPassEvent: 600
   material: {fileID: 2100000, guid: 91c7d1a80a77bdc40a51148d931e6f38, type: 2}
 --- !u!114 &5980040489756063668
 MonoBehaviour:

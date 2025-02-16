@@ -7,13 +7,14 @@ namespace Enhanced.Rendering.RendererFeatures
 {
     public class TrueScreenSpaceReflections : ScriptableRendererFeature
     {
+        [SerializeField] private RenderPassEvent renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         [SerializeField] private Material material = default;
         private TrueScreenSpaceReflectionsRenderPass renderpass = default;
 
         public override void Create()
         {
             renderpass = new TrueScreenSpaceReflectionsRenderPass(material);
-            renderpass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+            renderpass.renderPassEvent = renderPassEvent;
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
