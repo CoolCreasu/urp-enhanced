@@ -111,7 +111,7 @@ Shader "RendererFeatures/TrueScreenSpaceReflections"
 				float3 R_view = normalize(reflect(V_view, N_view));
 
 				float3 sPosVS =	posVS;
-				float3 ePosVS = sPosVS + R_view * 500;
+				float3 ePosVS = sPosVS + R_view * 100;
 
 				float4 sPosCS = mul(UNITY_MATRIX_P, float4(sPosVS, 1.0));
 				float4 ePosCS = ClipToFrustum(sPosCS, mul(UNITY_MATRIX_P, float4(ePosVS, 1.0)));
@@ -133,14 +133,21 @@ Shader "RendererFeatures/TrueScreenSpaceReflections"
 
 				float steps = 0.0;
 				// Define the maximum number of steps
-				#define MAX_STEPS 128
+				#define MAX_STEPS 150
+
+				float startDepth = LinearEyeDepth(sPosCS.z / sPosCS.w, _ZBufferParams); // precompute z
+				float endDepth = LinearEyeDepth(ePosCS.z / ePosCS.w, _ZBufferParams); // precompute z
 
 				[loop]
 				for (float t = tOffset; t < 1.0 && steps < MAX_STEPS; t += tStep, steps += 1)
 				{
 					float4 pos = lerp(sPosCS, ePosCS, t);
 					float testDepth = LinearEyeDepth(pos.z / pos.w, _ZBufferParams);
+
+					//testDepth = lerp(startDepth, endDepth, t);
+
 					float2 uv = (((pos.xy / pos.w) * float2(1, -1)) + 1) * 0.5;
+					//uv = lerp(P0, P1, t); // not correct: linear depth seems not to match with this uv interpolation.
 
 					#if UNITY_REVERSED_Z
 						float sceneDepth = LinearEyeDepth(SampleSceneDepth(uv), _ZBufferParams);
@@ -153,30 +160,6 @@ Shader "RendererFeatures/TrueScreenSpaceReflections"
 						return SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, uv);
 					}
 				}
-
-				// commented out code is used as a reference.
-				/*
-				[loop]
-				for (float i = 6.0; i < 128; i++) // i not 0 to avoid self intersecting. TODO Need find method to move t exactly 1 pixel.
-				{
-					float t = (float)i / (float)128.0;
-
-					float4 pos = lerp(sPosCS, ePosCS, t);
-					float testDepth = LinearEyeDepth(pos.z / pos.w, _ZBufferParams);
-					float2 uv = (((pos.xy / pos.w) * float2(1, -1)) + 1) * 0.5;
-
-					#if UNITY_REVERSED_Z
-						float sceneDepth = LinearEyeDepth(SampleSceneDepth(uv), _ZBufferParams);
-					#else
-						float sceneDepth = LinearEyeDepth(lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(uv)), _ZBufferParams);
-					#endif
-
-					if (sceneDepth < testDepth)
-					{
-						return SAMPLE_TEXTURE2D(_BlitTexture, sampler_BlitTexture, uv);
-					}
-				}
-				*/
 
 				return float4(0.0, 0.0, 0.0, 0.0);
 			}
