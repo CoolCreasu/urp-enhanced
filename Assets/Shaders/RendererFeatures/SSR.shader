@@ -140,7 +140,7 @@ Shader "RendererFeatures/SSR"
 				bool hit = false;
 
 				[loop]
-				for (int i = 0; i < 256; i++)
+				for (float i = 0; i < 200 && i < maxSteps; i++)
 				{
 					if (positionTS.x < 0 || positionTS.x > 1 || positionTS.y < 0 || positionTS.y > 1)
 					{
@@ -160,20 +160,12 @@ Shader "RendererFeatures/SSR"
 					float thickness = abs(linearTestDepth - linearSceneDepth);
 					float t = linearSceneDepth / _ProjectionParams.z;
 					//float thicknessThreshold = lerp(0.2, 2500.0, t);
-					float thicknessThreshold = _ZBufferParams.z * 0.5;
+					float thicknessThreshold = 0.6;//_ZBufferParams.z * 0.5;
 
 					if (linearTestDepth >= linearSceneDepth && thickness < thicknessThreshold)
 					{
-						//if (linearTestDepth >= _ZBufferParams.z * 0.99 || linearSceneDepth >= _ZBufferParams.z * 0.99)
-						//{
-						//	hit = false;
-						//	break;
-						//}
-						//else
-						//{
-							hit = true;
-							break;
-						//}
+						hit = (linearTestDepth <= _ZBufferParams.z * 0.99 || linearSceneDepth <= _ZBufferParams.z * 0.99);
+						break;
 					}
 
 					positionTS = positionTS + directionTS;
